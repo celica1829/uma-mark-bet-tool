@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#1f7a4c" />
+  <title>印→買い目 モバイル作成</title>
+  <style>
+    :root {
+      --bg: #0f1310;
+      --panel: #182019;
+      --line: #2b352c;
+      --ink: #eef4ee;
+      --muted: #9fb0a2;
+      --accent: #35c47e;
+      --accent-2: #e0a53f;
+      --warn: #ff7a7a;
+      --input-bg: #10150f;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    /* --- アクセスゲート --- */
+    #gate {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+
+    #gate .box {
+      width: 100%;
+      max-width: 340px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    #gate h1 { font-size: 16px; margin: 0 0 12px; color: var(--accent); }
+
+    #gate input {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 12px 10px;
+      font-size: 16px;
+      text-align: center;
+      letter-spacing: 0.1em;
+    }
+
+    #gate button {
+      width: 100%;
+      margin-top: 10px;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-weight: 600;
+      background: var(--accent);
+      color: #05170d;
+      cursor: pointer;
+    }
+
+    #gate .err {
+      color: var(--warn);
+      font-size: 12.5px;
+      min-height: 16px;
+      margin-top: 8px;
+    }
+
+    #app { display: none; }
+
+    .wrap {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 16px 14px calc(90px + env(safe-area-inset-bottom));
+    }
+
+    h1.appTitle {
+      font-size: 20px;
+      margin: 4px 0 4px;
+      letter-spacing: 0.02em;
+    }
+
+    .lead {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      color: var(--accent);
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin: 10px 0 4px;
+    }
+
+    label:first-of-type { margin-top: 0; }
+
+    input[type="text"], select, textarea {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 12px 10px;
+      font-size: 16px;
+      font-family: inherit;
+    }
+
+    textarea {
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    #markInput { min-height: 200px; }
+    #outputCsv { min-height: 140px; font-family: "Consolas", "Menlo", monospace; font-size: 13px; }
+
+    .row2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      appearance: none;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      flex: 1 1 auto;
+      min-height: 46px;
+    }
+
+    button.primary { background: var(--accent); color: #05170d; }
+    button.secondary { background: #263329; color: var(--ink); border: 1px solid var(--line); }
+    button.warm { background: var(--accent-2); color: #241802; }
+    button.small { flex: 0 0 auto; padding: 8px 12px; font-size: 13px; min-height: 38px; }
+
+    .summary {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+
+    .summary b { color: var(--ink); }
+
+    .detail-list {
+      max-height: 220px;
+      overflow-y: auto;
+      font-size: 12.5px;
+      background: var(--input-bg);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      color: var(--muted);
+      white-space: pre-wrap;
+    }
+
+    .status {
+      font-size: 12.5px;
+      color: var(--muted);
+      margin-top: 6px;
+      min-height: 18px;
+    }
+
+    .status.error { color: var(--warn); }
+    .status.ok { color: var(--accent); }
+
+    .hint {
+      font-size: 11.5px;
+      color: var(--muted);
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <!-- 簡易アクセスゲート: URLを知らない第三者の閲覧を防ぐための軽い抑止であり、真の認証ではない -->
+  <div id="gate">
+    <div class="box">
+      <h1>アクセスコードを入力してください</h1>
+      <input id="gateCode" type="password" inputmode="text" autocomplete="off" placeholder="コード" />
+      <button id="gateBtn">開く</button>
+      <div id="gateErr" class="err"></div>
+    </div>
+  </div>
+
+  <div id="app">
+    <div class="wrap">
+      <h1 class="appTitle">印 → 買い目 モバイル作成</h1>
+      <p class="lead">
+        外出先のスマートフォンから、印データを貼り付けて買い目CSVを作成・コピーするためのページです（サーバー不要・端末内で完結）。<br />
+        作成したCSVはUMACAアプリへ手入力するか、帰宅後にPC版の変換ツールに貼り付けて投票実行できます。
+      </p>
+
+      <section class="panel">
+        <h2>入力</h2>
+        <div class="row2">
+          <div>
+            <label for="markRaceDate">開催日 (YYYYMMDD)</label>
+            <input id="markRaceDate" type="text" inputmode="numeric" placeholder="20260906" />
+          </div>
+          <div>
+            <label for="markAmount">1点金額</label>
+            <input id="markAmount" type="text" inputmode="numeric" value="100" />
+          </div>
+        </div>
+
+        <label for="markBuildMode">作成モード</label>
+        <select id="markBuildMode">
+          <option value="sanrenpuku">三連複1頭軸（全部作る）</option>
+          <option value="umaren_wide">馬連＋ワイド（固定金額）</option>
+          <option value="umatan_multi_finishup">馬単マルチ（厩舎FINISH-UPⅡ=7→印）</option>
+        </select>
+
+        <label for="markInput">印データ（貼り付け）</label>
+        <textarea id="markInput" placeholder="函1 △ 2 アルテクィーン&#10;函1 △ 3 ヌーンベルク&#10;函1 △ 7 ショウナンカノア&#10;函2 ○ 10 ボーントゥラブユー&#10;函2 ▲ 12 メイショウローゼ"></textarea>
+
+        <div class="btn-row">
+          <button id="todayBtn" class="secondary small">開催日=今日</button>
+          <button id="pasteBtn" class="secondary small">クリップボード貼付</button>
+          <button id="clearMarkBtn" class="secondary small">入力クリア</button>
+        </div>
+        <div class="btn-row">
+          <button id="buildMarkBtn" class="primary">買い目を作成</button>
+        </div>
+        <div id="buildStatus" class="status">印データを貼り付けて「買い目を作成」を押してください。</div>
+      </section>
+
+      <section class="panel">
+        <h2>出力（IPATGO投票CSV）</h2>
+        <div id="summary" class="summary">レース数: 0 / 投票点数: 0点 / 投票総額: 0円</div>
+        <textarea id="outputCsv" readonly placeholder="ここに買い目CSVが表示されます"></textarea>
+        <div class="btn-row">
+          <button id="copyBtn" class="primary">出力をコピー</button>
+          <button id="downloadBtn" class="warm">CSVダウンロード</button>
+          <button id="clearOutBtn" class="secondary small">出力クリア</button>
+        </div>
+        <div id="copyStatus" class="status"></div>
+
+        <label style="margin-top:14px;">生成明細</label>
+        <div id="detailList" class="detail-list">まだ生成されていません。</div>
+      </section>
+
+      <div class="hint">
+        対応: 三連複1頭軸(WHEEL1B) / 馬連＋ワイド(固定金額) / 馬単マルチ(厩舎FINISH-UPⅡ=7起点)。<br />
+        入力・設定はこの端末のブラウザに自動保存されます（他人と共有する端末では「入力クリア」推奨）。
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // アクセスゲート: パスコードのSHA-256をここに保存（平文は保持しない）
+    const GATE_HASH = "1721bffac3f575779f6329029ebd9fcc3d69b3107e064102e0c235bea1bd7d79";
+    const GATE_SESSION_KEY = "mark_bet_gate_ok_v1";
+
+    async function sha256Hex(text) {
+      const data = new TextEncoder().encode(text);
+      const digest = await crypto.subtle.digest("SHA-256", data);
+      return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function unlockApp() {
+      document.getElementById("gate").style.display = "none";
+      document.getElementById("app").style.display = "block";
+    }
+
+    async function tryUnlock() {
+      const input = document.getElementById("gateCode");
+      const err = document.getElementById("gateErr");
+      const code = input.value.trim();
+      if (!code) return;
+      const hex = await sha256Hex(code);
+      if (hex === GATE_HASH) {
+        sessionStorage.setItem(GATE_SESSION_KEY, "1");
+        err.textContent = "";
+        unlockApp();
+      } else {
+        err.textContent = "コードが違います。";
+        input.value = "";
+        input.focus();
+      }
+    }
+
+    document.getElementById("gateBtn").addEventListener("click", tryUnlock);
+    document.getElementById("gateCode").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") tryUnlock();
+    });
+
+    if (sessionStorage.getItem(GATE_SESSION_KEY) === "1") {
+      unlockApp();
+    }
+
+    // --- ここから買い目作成ロジック ---
+    const STORAGE_KEY = "mobile_mark_bet_v1";
+
+    const SHORT_PLACE_MAP = {
+      "札": "SAPPORO", "函": "HAKODATE", "福": "FUKUSHIMA", "新": "NIIGATA", "東": "TOKYO",
+      "中": "NAKAYAMA", "名": "CHUKYO", "京": "KYOTO", "阪": "HANSHIN", "小": "KOKURA"
+    };
+
+    const LONG_PLACE_MAP = {
+      "札幌": "SAPPORO", "函館": "HAKODATE", "福島": "FUKUSHIMA", "新潟": "NIIGATA", "東京": "TOKYO",
+      "中山": "NAKAYAMA", "中京": "CHUKYO", "京都": "KYOTO", "阪神": "HANSHIN", "小倉": "KOKURA"
+    };
+
+    function toInt(value) {
+      const n = Number.parseInt(String(value || "").trim(), 10);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function pad2(value) {
+      const n = toInt(value);
+      if (n === null || n < 0) return "";
+      return String(n).padStart(2, "0");
+    }
+
+    function joinNums(nums) {
+      return nums.map(pad2).filter(Boolean).join("");
+    }
+
+    function comb2(n) {
+      return n >= 2 ? (n * (n - 1)) / 2 : 0;
+    }
+
+    function formatYen(value) {
+      return Number(value || 0).toLocaleString("ja-JP");
+    }
+
+    function getTodayYmd() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      return `${y}${m}${d}`;
+    }
+
+    function parseMarkEntries(markText, raceDate) {
+      const lines = String(markText || "").replace(/\r/g, "").split("\n").map(v => v.trim()).filter(Boolean);
+      const entries = [];
+
+      for (const line of lines) {
+        const match = line.match(/^(.+?)\s+([◎○〇▲△★×危])\s+(\d+)\s+(.+)$/);
+        if (!match) continue;
+        const placeAndRace = match[1].trim();
+        const mark = match[2].trim() === "○" ? "〇" : match[2].trim();
+        const num = pad2(match[3]);
+        const name = match[4].trim();
+        const raceMatch = /^(.+?)(\d+)$/.exec(placeAndRace);
+        if (!raceMatch) continue;
+        const placeShort = raceMatch[1].trim();
+        const race = String(Number.parseInt(raceMatch[2], 10));
+        const place = SHORT_PLACE_MAP[placeShort] || placeShort;
+        if (!raceDate || !/^\d{8}$/.test(raceDate) || !place || !race || !num) continue;
+        entries.push({ date: raceDate, place, race, mark, num, name });
+      }
+
+      return entries;
+    }
+
+    function parseFinishUpEntries(markText, raceDate) {
+      const lines = String(markText || "").replace(/\r/g, "").split("\n");
+      const entries = [];
+
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        if (line.includes("場所") && line.includes("厩舎FINISH-UPⅡ")) continue;
+
+        const cols = line.split(/\s+/).filter(Boolean);
+        if (cols.length < 10) continue;
+
+        const placeRaw = cols[0];
+        const race = String(toInt(cols[1]) || "");
+        const num = pad2(cols[5]);
+        const finishUp = toInt(cols[9]);
+        const place = LONG_PLACE_MAP[placeRaw] || SHORT_PLACE_MAP[placeRaw] || placeRaw;
+
+        if (!raceDate || !/^\d{8}$/.test(raceDate) || !place || !race || !num || finishUp === null) continue;
+        entries.push({ date: raceDate, place, race, num, finishUp });
+      }
+
+      return entries;
+    }
+
+    function sortGroupEntries(grouped) {
+      return Array.from(grouped.entries()).sort((a, b) => {
+        const firstA = a[1][0] || {};
+        const firstB = b[1][0] || {};
+        if (firstA.place !== firstB.place) return String(firstA.place).localeCompare(String(firstB.place), "ja");
+        return Number(firstA.race) - Number(firstB.race);
+      });
+    }
+
+    function buildMarkVoteRows(markText, raceDate, amount) {
+      const entries = parseMarkEntries(markText, raceDate);
+      const grouped = new Map();
+      for (const entry of entries) {
+        const key = `${entry.date}_${entry.place}_${entry.race}`;
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(entry);
+      }
+
+      const axisOrder = ["◎", "〇", "▲"];
+      const rows = [];
+      let totalPoints = 0;
+      let totalAmount = 0;
+      const generated = [];
+      const raceCount = grouped.size;
+
+      for (const [_key, horses] of sortGroupEntries(grouped)) {
+        const unique = Array.from(new Map(horses.map(h => [h.num, h])).values()).sort((a, b) => Number(a.num) - Number(b.num));
+        if (!unique.some(h => axisOrder.includes(h.mark))) continue;
+
+        for (const axisMark of axisOrder) {
+          const axisHorses = unique.filter(h => h.mark === axisMark);
+          if (axisHorses.length === 0) continue;
+
+          const others = unique
+            .filter(h => h.mark !== axisMark)
+            .map(h => h.num)
+            .sort((a, b) => Number(a) - Number(b));
+          if (others.length < 2) continue;
+
+          for (const axisHorse of axisHorses) {
+            const line = [
+              axisHorse.date, axisHorse.place, axisHorse.race,
+              "SANRENPUKU", "WHEEL1B", "",
+              `${axisHorse.num}-${joinNums(others)}`, amount
+            ].join(",");
+
+            const points = comb2(others.length);
+            rows.push(line);
+            totalPoints += points;
+            totalAmount += points * amount;
+            generated.push(`${axisHorse.date} ${axisHorse.place}${axisHorse.race}R / ${axisHorse.mark}${axisHorse.num}軸 / ${points}点`);
+          }
+        }
+      }
+
+      return { rows, totalPoints, totalAmount, generated, raceCount };
+    }
+
+    function buildMarkVoteRowsUmarenWide(markText, raceDate) {
+      const entries = parseMarkEntries(markText, raceDate);
+      const grouped = new Map();
+      for (const entry of entries) {
+        const key = `${entry.date}_${entry.place}_${entry.race}`;
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(entry);
+      }
+
+      const rules = {
+        "◎": [{ baken: "UMAREN", amount: 200 }, { baken: "WIDE", amount: 200 }],
+        "〇": [{ baken: "UMAREN", amount: 100 }, { baken: "WIDE", amount: 200 }],
+        "▲": [{ baken: "WIDE", amount: 200 }]
+      };
+
+      const rows = [];
+      let totalPoints = 0;
+      let totalAmount = 0;
+      const generated = [];
+      const raceCount = grouped.size;
+
+      for (const [_key, horses] of sortGroupEntries(grouped)) {
+        const unique = Array.from(new Map(horses.map(h => [h.num, h])).values()).sort((a, b) => Number(a.num) - Number(b.num));
+        const allMarked = unique.filter(h => !!h.mark);
+        if (allMarked.length === 0) continue;
+
+        for (const axisMark of ["◎", "〇", "▲"]) {
+          const axisHorses = unique.filter(h => h.mark === axisMark);
+          if (axisHorses.length === 0) continue;
+
+          for (const axisHorse of axisHorses) {
+            const others = allMarked.filter(h => h.mark !== axisMark && h.num !== axisHorse.num);
+            if (others.length === 0) continue;
+
+            for (const other of others) {
+              const pair = [axisHorse.num, other.num].sort((a, b) => Number(a) - Number(b));
+              const kumiban = `${pair[0]}-${pair[1]}`;
+              const applyRules = rules[axisMark] || [];
+
+              for (const rule of applyRules) {
+                const line = [
+                  axisHorse.date, axisHorse.place, axisHorse.race,
+                  rule.baken, "NORMAL", "", kumiban, rule.amount
+                ].join(",");
+                rows.push(line);
+                totalPoints += 1;
+                totalAmount += rule.amount;
+                generated.push(`${axisHorse.date} ${axisHorse.place}${axisHorse.race}R / ${axisMark}${axisHorse.num}→${other.mark}${other.num} / ${rule.baken} ${rule.amount}円`);
+              }
+            }
+          }
+        }
+      }
+
+      return { rows, totalPoints, totalAmount, generated, raceCount };
+    }
+
+    function buildMarkVoteRowsUmatanMultiFinishUp(markText, raceDate) {
+      const markEntries = parseMarkEntries(markText, raceDate);
+      const finishEntries = parseFinishUpEntries(markText, raceDate);
+
+      const markByRace = new Map();
+      for (const entry of markEntries) {
+        const key = `${entry.date}_${entry.place}_${entry.race}`;
+        if (!markByRace.has(key)) markByRace.set(key, []);
+        markByRace.get(key).push(entry);
+      }
+
+      const finishByRace = new Map();
+      for (const entry of finishEntries) {
+        if (entry.finishUp !== 7) continue;
+        const key = `${entry.date}_${entry.place}_${entry.race}`;
+        if (!finishByRace.has(key)) finishByRace.set(key, []);
+        finishByRace.get(key).push(entry);
+      }
+
+      const amountByMark = { "◎": 300, "〇": 200, "▲": 200, "△": 100 };
+
+      const rows = [];
+      let totalPoints = 0;
+      let totalAmount = 0;
+      const generated = [];
+      let raceCount = 0;
+
+      const targetRaceKeys = Array.from(finishByRace.keys()).sort();
+      for (const key of targetRaceKeys) {
+        const axisListRaw = finishByRace.get(key) || [];
+        const markListRaw = markByRace.get(key) || [];
+        if (axisListRaw.length === 0 || markListRaw.length === 0) continue;
+
+        const axisList = Array.from(new Map(axisListRaw.map(v => [v.num, v])).values()).sort((a, b) => Number(a.num) - Number(b.num));
+        const markList = Array.from(new Map(markListRaw.map(v => [v.num, v])).values()).sort((a, b) => Number(a.num) - Number(b.num));
+        let raceHasRows = false;
+
+        for (const axis of axisList) {
+          const targets = markList.filter((m) => amountByMark[m.mark] && m.num !== axis.num);
+          for (const target of targets) {
+            const amount = amountByMark[target.mark];
+            const line = [
+              axis.date, axis.place, axis.race,
+              "UMATAN", "NORMAL", "", `${axis.num}-${target.num}`, amount
+            ].join(",");
+
+            rows.push(line);
+            totalPoints += 1;
+            totalAmount += amount;
+            raceHasRows = true;
+            generated.push(`${axis.date} ${axis.place}${axis.race}R / FINISH7:${axis.num}→${target.mark}${target.num} / 馬単 ${amount}円`);
+          }
+        }
+
+        if (raceHasRows) raceCount += 1;
+      }
+
+      return { rows, totalPoints, totalAmount, generated, raceCount };
+    }
+
+    function buildMarkVoteByMode(mode, markText, raceDate, amount) {
+      if (mode === "umaren_wide") return buildMarkVoteRowsUmarenWide(markText, raceDate);
+      if (mode === "umatan_multi_finishup") return buildMarkVoteRowsUmatanMultiFinishUp(markText, raceDate);
+      return buildMarkVoteRows(markText, raceDate, amount);
+    }
+
+    function setBuildStatus(msg, kind) {
+      const el = document.getElementById("buildStatus");
+      el.textContent = msg;
+      el.className = "status" + (kind ? ` ${kind}` : "");
+    }
+
+    function setCopyStatus(msg, kind) {
+      const el = document.getElementById("copyStatus");
+      el.textContent = msg;
+      el.className = "status" + (kind ? ` ${kind}` : "");
+    }
+
+    function persistFields() {
+      const state = {
+        markRaceDate: document.getElementById("markRaceDate").value,
+        markAmount: document.getElementById("markAmount").value,
+        markBuildMode: document.getElementById("markBuildMode").value,
+        markInput: document.getElementById("markInput").value
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function restoreFields() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const state = JSON.parse(raw);
+        if (state.markRaceDate) document.getElementById("markRaceDate").value = state.markRaceDate;
+        if (state.markAmount) document.getElementById("markAmount").value = state.markAmount;
+        if (state.markBuildMode) document.getElementById("markBuildMode").value = state.markBuildMode;
+        if (state.markInput) document.getElementById("markInput").value = state.markInput;
+      } catch (_e) {
+        // 保存データ破損時は無視して初期状態を使う
+      }
+    }
+
+    function updateSummary(raceCount, totalPoints, totalAmount) {
+      document.getElementById("summary").innerHTML =
+        `レース数: <b>${raceCount}</b> / 投票点数: <b>${formatYen(totalPoints)}</b>点 / 投票総額: <b>${formatYen(totalAmount)}</b>円`;
+    }
+
+    document.getElementById("todayBtn").addEventListener("click", function () {
+      document.getElementById("markRaceDate").value = getTodayYmd();
+      persistFields();
+    });
+
+    document.getElementById("pasteBtn").addEventListener("click", async function () {
+      try {
+        const text = await navigator.clipboard.readText();
+        document.getElementById("markInput").value = text;
+        persistFields();
+        setBuildStatus("クリップボードから貼り付けました。", "ok");
+      } catch (_e) {
+        setBuildStatus("クリップボード読取に失敗しました。手動で貼り付けてください。", "error");
+      }
+    });
+
+    document.getElementById("clearMarkBtn").addEventListener("click", function () {
+      document.getElementById("markInput").value = "";
+      persistFields();
+      setBuildStatus("印入力をクリアしました。");
+    });
+
+    document.getElementById("buildMarkBtn").addEventListener("click", function () {
+      const mode = document.getElementById("markBuildMode").value;
+      const raceDate = document.getElementById("markRaceDate").value.trim();
+      const amount = toInt(document.getElementById("markAmount").value) || 100;
+      const markText = document.getElementById("markInput").value;
+      persistFields();
+
+      if (!/^\d{8}$/.test(raceDate)) {
+        setBuildStatus("開催日はYYYYMMDD形式の8桁で入力してください。", "error");
+        return;
+      }
+      if (!markText.trim()) {
+        setBuildStatus("印データを入力してください。", "error");
+        return;
+      }
+
+      const result = buildMarkVoteByMode(mode, markText, raceDate, amount);
+
+      if (result.rows.length === 0) {
+        setBuildStatus("買い目を生成できませんでした。印データや開催日を確認してください。", "error");
+        document.getElementById("outputCsv").value = "";
+        document.getElementById("detailList").textContent = "まだ生成されていません。";
+        updateSummary(0, 0, 0);
+        return;
+      }
+
+      document.getElementById("outputCsv").value = result.rows.join("\n");
+      document.getElementById("detailList").textContent = result.generated.join("\n");
+      updateSummary(result.raceCount, result.totalPoints, result.totalAmount);
+      setBuildStatus(`買い目を作成しました（${result.rows.length}行）。`, "ok");
+    });
+
+    document.getElementById("copyBtn").addEventListener("click", async function () {
+      const text = document.getElementById("outputCsv").value;
+      if (!text) {
+        setCopyStatus("コピー対象がありません。先に買い目を作成してください。", "error");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopyStatus("出力CSVをコピーしました。", "ok");
+      } catch (_e) {
+        setCopyStatus("コピーに失敗しました。手動で選択してコピーしてください。", "error");
+      }
+    });
+
+    document.getElementById("downloadBtn").addEventListener("click", function () {
+      const text = document.getElementById("outputCsv").value;
+      if (!text) {
+        setCopyStatus("ダウンロード対象がありません。先に買い目を作成してください。", "error");
+        return;
+      }
+      const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const raceDate = document.getElementById("markRaceDate").value.trim() || getTodayYmd();
+      a.href = url;
+      a.download = `mark_bet_${raceDate}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById("clearOutBtn").addEventListener("click", function () {
+      document.getElementById("outputCsv").value = "";
+      document.getElementById("detailList").textContent = "まだ生成されていません。";
+      updateSummary(0, 0, 0);
+      setCopyStatus("");
+    });
+
+    ["markRaceDate", "markAmount", "markBuildMode", "markInput"].forEach((id) => {
+      document.getElementById(id).addEventListener("change", persistFields);
+    });
+
+    restoreFields();
+  </script>
+</body>
+</html>
