@@ -55,13 +55,12 @@
       }
       const select = markCell.querySelector("select");
       const option = select && Array.from(select.options).find((item) => normalizeName(item.dataset.htmlText || item.textContent) === normalizeName(target.mark));
-      if (select && option) {
+      const choice = option && markCell.querySelectorAll(".tzSelect .dropDown li")[option.index];
+      if (choice) {
+        choice.click();
+      } else if (select && option) {
         select.value = option.value;
         select.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-      const display = markCell.querySelector(".tzSelect .selectBox");
-      if (display) {
-        display.textContent = target.mark;
       } else if (!markCell.querySelector(`.${MARK_CLASS}`)) {
         const badge = document.createElement("span");
         badge.className = MARK_CLASS;
