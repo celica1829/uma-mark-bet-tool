@@ -38,16 +38,27 @@
     document.querySelectorAll(`.${MARK_CLASS}`).forEach((node) => node.remove());
     const targets = entries.filter((entry) => entry.place === race.place && entry.race === race.race);
     let applied = 0;
-    const unmatched = new Set(targets.map((entry) => entry.name));
+    const missingHorses = [];
+    const missingMarkCells = [];
     for (const target of targets) {
       const horseNode = Array.from(document.querySelectorAll("a, .HorseName, [class*='HorseName']")).find((node) => normalizeName(node.textContent) === normalizeName(target.name));
-      if (!horseNode) continue;
-      const row = horseNode.closest("tr");
-      const markCell = row?.querySelector("td.CheckMark");
-      if (!markCell) continue;
+      const numberNode = Array.from(document.querySelectorAll("[class*='Umaban']")).find((node) => String(node.textContent).trim() === target.number);
+      const row = horseNode?.closest("tr, .HorseList, [class*='HorseList']") || numberNode?.closest("tr, .HorseList, [class*='HorseList']");
+      if (!row) {
+        missingHorses.push(target.name);
+        continue;
+      }
+      const markCell = row.querySelector("td.CheckMark, .CheckMark");
+      if (!markCell) {
+        missingMarkCells.push(target.name);
+        continue;
+      }
       const select = markCell.querySelector("select");
       const option = select && Array.from(select.options).find((item) => normalizeName(item.dataset.htmlText || item.textContent) === normalizeName(target.mark));
-      if (select && option) select.value = option.value;
+      if (select && option) {
+        select.value = option.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
       const display = markCell.querySelector(".tzSelect .selectBox");
       if (display) {
         display.textContent = target.mark;
@@ -59,9 +70,8 @@
         markCell.appendChild(badge);
       }
       applied += 1;
-      unmatched.delete(target.name);
     }
-    return { applied, expected: targets.length, unmatched: Array.from(unmatched) };
+    return { applied, expected: targets.length, missingHorses, missingMarkCells };
   }
 
   function showInput(race) {
@@ -77,7 +87,7 @@
     overlay.querySelector("button:not(.ngwe-cancel)").addEventListener("click", () => {
       const result = applyMarks(parseEntries(textarea.value), race);
       overlay.remove();
-      const detail = result.unmatched.length ? `\n見つからない馬: ${result.unmatched.join("、")}` : "";
+      const detail = result.missingHorses.length ? `\n出走行が見つからない馬: ${result.missingHorses.join("、")}` : result.missingMarkCells.length ? `\n印欄が見つからない馬: ${result.missingMarkCells.join("、")}` : "";
       alert(`${result.applied}頭に印を表示しました。対象の印データは${result.expected}頭です。${detail}`);
     });
   }
