@@ -34,15 +34,15 @@
     document.head.appendChild(style);
   }
 
-  function applyMarks(entries, race) {
-    document.querySelectorAll(`.${MARK_CLASS}`).forEach((node) => node.remove());
+  function applyMarks(entries, race, root = document) {
+    root.querySelectorAll(`.${MARK_CLASS}`).forEach((node) => node.remove());
     const targets = entries.filter((entry) => entry.place === race.place && entry.race === race.race);
     let applied = 0;
     const missingHorses = [];
     const missingMarkCells = [];
     for (const target of targets) {
-      const horseNode = Array.from(document.querySelectorAll("a, .HorseName, [class*='HorseName']")).find((node) => normalizeName(node.textContent) === normalizeName(target.name));
-      const numberNode = Array.from(document.querySelectorAll("[class*='Umaban']")).find((node) => String(node.textContent).trim() === target.number);
+      const horseNode = Array.from(root.querySelectorAll("a, .HorseName, [class*='HorseName']")).find((node) => normalizeName(node.textContent) === normalizeName(target.name));
+      const numberNode = Array.from(root.querySelectorAll("[class*='Umaban']")).find((node) => String(node.textContent).trim() === target.number);
       const row = horseNode?.closest("tr, .HorseList, [class*='HorseList']") || numberNode?.closest("tr, .HorseList, [class*='HorseList']");
       if (!row) {
         missingHorses.push(target.name);
@@ -73,21 +73,30 @@
     return { applied, expected: targets.length, missingHorses, missingMarkCells };
   }
 
+  async function discoverRaceUrls(raceId) { const ymd = /^\d{12}$/.test(raceId) ? raceId.slice(0, 8) : ""; if (!ymd) return new Map(); const response = await fetch(`${location.origin}/top/race_list.html?kaisai_date=${ymd}`, { credentials: "include" }); if (!response.ok) return new Map(); const page = new DOMParser().parseFromString(await response.text(), "text/html"); const urls = new Map(); for (const link of page.querySelectorAll('a[href*="race_id="]')) { const linkedRaceId = new URL(link.href, location.href).searchParams.get("race_id") || ""; if (!/^\d{12}$/.test(linkedRaceId)) continue; const place = PLACE_BY_CODE[linkedRaceId.slice(4, 6)]; const raceNumber = String(Number(linkedRaceId.slice(10, 12))); if (place) urls.set(`${place}_${raceNumber}`, `${location.origin}/race/shutuba.html?race_id=${linkedRaceId}`); } return urls; }
+  function loadRaceDocument(url) { return new Promise((resolve, reject) => { const frame = document.createElement("iframe"); frame.style.cssText = "position:fixed;width:1px;height:1px;left:-10px;top:-10px;opacity:0;pointer-events:none;"; frame.onload = () => resolve({ frame, doc: frame.contentDocument }); frame.onerror = () => reject(new Error(url)); frame.src = url; document.body.appendChild(frame); }); }
+  async function applyAllRaces(entries, race, raceId) {
+    const results = []; const raceUrls = await discoverRaceUrls(raceId); const groups = new Map();
+    for (const entry of entries) { const key = `${entry.place}_${entry.race}`; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(entry); }
+    for (const [key, targets] of groups) { const [groupPlace, raceNumber] = key.split('_'); const url = raceUrls.get(key) || (groupPlace === race.place ? `${location.origin}/race/shutuba.html?race_id=${raceId.slice(0, 10)}${String(raceNumber).padStart(2, '0')}` : ''); if (!url) { results.push(`${groupPlace}${raceNumber}R: race_id取得失敗`); continue; } let frameInfo; try { frameInfo = await loadRaceDocument(url); await new Promise((resolve) => setTimeout(resolve, 900)); const result = applyMarks(targets, { place: groupPlace, race: raceNumber }, frameInfo.doc); await new Promise((resolve) => setTimeout(resolve, 350)); results.push(`${groupPlace}${raceNumber}R: ${result.applied}/${result.expected}`); frameInfo.frame.remove(); } catch (_e) { results.push(`${groupPlace}${raceNumber}R: 読み込み失敗`); frameInfo?.frame.remove(); } }
+    return results;
+  }
+
   function showInput(race) {
     addStyle();
     document.getElementById(OVERLAY_ID)?.remove();
     const overlay = document.createElement("div");
     overlay.id = OVERLAY_ID;
-    overlay.innerHTML = `<div class="ngwe-box"><h2>${race.place}${race.race}R に印を反映</h2><p>印データを貼り付けて「反映」を押してください。</p><textarea placeholder="中12 △ 1 コスモコンフェルマ\n阪1 ▲ 4 ウンディーネ"></textarea><div class="ngwe-actions"><button class="ngwe-cancel" type="button">閉じる</button><button type="button">反映</button></div></div>`;
+    overlay.innerHTML = `<div class="ngwe-box"><h2>${race.place}${race.race}R に印を反映</h2><p>印データを貼り付けてください。入力された${race.place}の全対象レースへ一括反映します。</p><textarea placeholder="中12 △ 1 コスモコンフェルマ\n阪1 ▲ 4 ウンディーネ"></textarea><div class="ngwe-actions"><button class="ngwe-cancel" type="button">閉じる</button><button type="button">全レースへ反映</button></div></div>`;
     document.body.appendChild(overlay);
     const textarea = overlay.querySelector("textarea");
     textarea.focus();
     overlay.querySelector(".ngwe-cancel").addEventListener("click", () => overlay.remove());
-    overlay.querySelector("button:not(.ngwe-cancel)").addEventListener("click", () => {
-      const result = applyMarks(parseEntries(textarea.value), race);
+    overlay.querySelector("button:not(.ngwe-cancel)").addEventListener("click", async () => {
+      const entries = parseEntries(textarea.value); const result = applyMarks(entries, race); const raceId = new URL(location.href).searchParams.get("race_id"); const batchResults = await applyAllRaces(entries, race, raceId);
       overlay.remove();
       const detail = result.missingHorses.length ? `\n出走行が見つからない馬: ${result.missingHorses.join("、")}` : result.missingMarkCells.length ? `\n印欄が見つからない馬: ${result.missingMarkCells.join("、")}` : "";
-      alert(`${result.applied}頭に印を表示しました。対象の印データは${result.expected}頭です。${detail}`);
+      alert(`${result.applied}頭を含む対象レースへ反映しました。\n${batchResults.join("\n")}${detail}`);
     });
   }
 
