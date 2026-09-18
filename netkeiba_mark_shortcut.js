@@ -23,7 +23,7 @@
   }
 
   function normalizeName(text) {
-    return String(text || "").replace(/\s+/g, "").replace(/[\u30A1-\u30F6]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0x60));
+    return String(text || "").replace(/[○◯]/g, "〇").replace(/\s+/g, "").replace(/[\u30A1-\u30F6]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0x60));
   }
 
   function addStyle() {
@@ -42,17 +42,24 @@
     for (const target of targets) {
       const horseNode = Array.from(document.querySelectorAll("a, .HorseName, [class*='HorseName']")).find((node) => normalizeName(node.textContent) === normalizeName(target.name));
       if (!horseNode) continue;
-      const container = horseNode.matches("a") ? horseNode.parentNode : horseNode;
-      if (!container || container.querySelector(`.${MARK_CLASS}`)) continue;
-      const matching = target;
-      if (!matching) continue;
-      const badge = document.createElement("span");
-      badge.className = MARK_CLASS;
-      badge.textContent = matching.mark;
-      badge.title = `${matching.mark} ${matching.number} ${matching.name}`;
-      container.insertBefore(badge, container.firstChild);
+      const row = horseNode.closest("tr");
+      const markCell = row?.querySelector("td.CheckMark");
+      if (!markCell) continue;
+      const select = markCell.querySelector("select");
+      const option = select && Array.from(select.options).find((item) => normalizeName(item.dataset.htmlText || item.textContent) === normalizeName(target.mark));
+      if (select && option) select.value = option.value;
+      const display = markCell.querySelector(".tzSelect .selectBox");
+      if (display) {
+        display.textContent = target.mark;
+      } else if (!markCell.querySelector(`.${MARK_CLASS}`)) {
+        const badge = document.createElement("span");
+        badge.className = MARK_CLASS;
+        badge.textContent = target.mark;
+        badge.title = `${target.mark} ${target.number} ${target.name}`;
+        markCell.appendChild(badge);
+      }
       applied += 1;
-      unmatched.delete(matching.name);
+      unmatched.delete(target.name);
     }
     return { applied, expected: targets.length, unmatched: Array.from(unmatched) };
   }
