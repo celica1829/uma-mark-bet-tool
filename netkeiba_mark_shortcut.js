@@ -38,19 +38,23 @@
     document.querySelectorAll(`.${MARK_CLASS}`).forEach((node) => node.remove());
     const targets = entries.filter((entry) => entry.place === race.place && entry.race === race.race);
     let applied = 0;
-    for (const row of document.querySelectorAll("tr")) {
-      const horseLink = Array.from(row.querySelectorAll('a[href*="/horse/"]')).find((link) => link.textContent.trim());
-      if (!horseLink) continue;
-      const matching = targets.find((entry) => normalizeName(entry.name) === normalizeName(horseLink.textContent));
+    const unmatched = new Set(targets.map((entry) => entry.name));
+    for (const target of targets) {
+      const horseNode = Array.from(document.querySelectorAll("a, .HorseName, [class*='HorseName']")).find((node) => normalizeName(node.textContent) === normalizeName(target.name));
+      if (!horseNode) continue;
+      const container = horseNode.matches("a") ? horseNode.parentNode : horseNode;
+      if (!container || container.querySelector(`.${MARK_CLASS}`)) continue;
+      const matching = target;
       if (!matching) continue;
       const badge = document.createElement("span");
       badge.className = MARK_CLASS;
       badge.textContent = matching.mark;
       badge.title = `${matching.mark} ${matching.number} ${matching.name}`;
-      horseLink.parentNode.insertBefore(badge, horseLink);
+      container.insertBefore(badge, container.firstChild);
       applied += 1;
+      unmatched.delete(matching.name);
     }
-    return { applied, expected: targets.length };
+    return { applied, expected: targets.length, unmatched: Array.from(unmatched) };
   }
 
   function showInput(race) {
@@ -66,7 +70,8 @@
     overlay.querySelector("button:not(.ngwe-cancel)").addEventListener("click", () => {
       const result = applyMarks(parseEntries(textarea.value), race);
       overlay.remove();
-      alert(`${result.applied}頭に印を表示しました。対象の印データは${result.expected}頭です。`);
+      const detail = result.unmatched.length ? `\n見つからない馬: ${result.unmatched.join("、")}` : "";
+      alert(`${result.applied}頭に印を表示しました。対象の印データは${result.expected}頭です。${detail}`);
     });
   }
 
