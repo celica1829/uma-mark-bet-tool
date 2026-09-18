@@ -48,7 +48,7 @@
         missingHorses.push(target.name);
         continue;
       }
-      const markCell = row.querySelector("td.CheckMark, .CheckMark");
+      const markCell = row.querySelector("td.CheckMark, .CheckMark, td.Horse_Select, .Horse_Select");
       if (!markCell) {
         missingMarkCells.push(target.name);
         continue;
@@ -92,11 +92,6 @@
     });
   }
 
-  if (location.hostname.startsWith("race.sp.")) {
-    alert("netkeibaのスマホ版には印欄がありません。SafariのaAメニューから「デスクトップ用Webサイトを表示」を選び、race.netkeiba.com の出馬表を開いてから実行してください。");
-    completion("スマホ版には印欄なし");
-    return;
-  }
   const race = currentRace();
   if (!race?.place) {
     alert("netkeibaの出馬表または結果ページで実行してください。");
