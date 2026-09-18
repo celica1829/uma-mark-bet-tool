@@ -265,6 +265,8 @@
         <div class="btn-row">
           <button id="todayBtn" class="secondary small">開催日=今日</button>
           <button id="pasteBtn" class="secondary small">クリップボード貼付</button>
+          <button id="copyMarksBtn" class="secondary small">印をコピー</button>
+          <button id="shareMarksBtn" class="secondary small">印を共有</button>
           <button id="clearMarkBtn" class="secondary small">入力クリア</button>
         </div>
         <div class="btn-row">
@@ -651,6 +653,28 @@
         `レース数: <b>${raceCount}</b> / 投票点数: <b>${formatYen(totalPoints)}</b>点 / 投票総額: <b>${formatYen(totalAmount)}</b>円`;
     }
 
+    async function copyTextForIos(text) {
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch (_e) {
+          // SafariでクリップボードAPIが許可されない場合は互換方式を使う
+        }
+      }
+      const temporary = document.createElement("textarea");
+      temporary.value = text;
+      temporary.setAttribute("readonly", "");
+      temporary.style.cssText = "position:fixed;top:0;left:0;opacity:0;";
+      document.body.appendChild(temporary);
+      temporary.focus();
+      temporary.select();
+      temporary.setSelectionRange(0, temporary.value.length);
+      const copied = document.execCommand("copy");
+      temporary.remove();
+      return copied;
+    }
+
     document.getElementById("todayBtn").addEventListener("click", function () {
       document.getElementById("markRaceDate").value = getTodayYmd();
       persistFields();
@@ -664,6 +688,37 @@
         setBuildStatus("クリップボードから貼り付けました。", "ok");
       } catch (_e) {
         setBuildStatus("クリップボード読取に失敗しました。手動で貼り付けてください。", "error");
+      }
+    });
+
+    document.getElementById("copyMarksBtn").addEventListener("click", async function () {
+      const text = document.getElementById("markInput").value.trim();
+      if (!text) {
+        setBuildStatus("コピーする印データがありません。", "error");
+        return;
+      }
+      if (await copyTextForIos(text)) {
+        setBuildStatus("印データをコピーしました。Safariでnetkeibaを開き、共有メニューからショートカットを実行してください。", "ok");
+      } else {
+        setBuildStatus("コピーに失敗しました。印データを手動で選択してコピーしてください。", "error");
+      }
+    });
+
+    document.getElementById("shareMarksBtn").addEventListener("click", async function () {
+      const text = document.getElementById("markInput").value.trim();
+      if (!text) {
+        setBuildStatus("共有する印データがありません。", "error");
+        return;
+      }
+      if (!navigator.share) {
+        setBuildStatus("このブラウザでは共有できません。「印をコピー」を使ってください。", "error");
+        return;
+      }
+      try {
+        await navigator.share({ title: "netkeiba用の印", text });
+        setBuildStatus("共有シートを開きました。メモに保存するか、コピーを選んでください。", "ok");
+      } catch (_e) {
+        setBuildStatus("共有をキャンセルしました。", "");
       }
     });
 
