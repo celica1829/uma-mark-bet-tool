@@ -34,7 +34,17 @@
     document.head.appendChild(style);
   }
 
-  function applyMarks(entries, race, root = document) {
+  async function waitForMarkMenus(root, timeoutMs = 10000) {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < timeoutMs) {
+      const rows = root.querySelectorAll("tr.HorseList, tr[class*='HorseList']");
+      if (rows.length > 0 && Array.from(rows).every((row) => row.querySelector("select[id^='mark_']"))) return true;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    return false;
+  }
+  async function applyMarks(entries, race, root = document) {
+    await waitForMarkMenus(root);
     root.querySelectorAll(`.${MARK_CLASS}`).forEach((node) => node.remove());
     const targets = entries.filter((entry) => entry.place === race.place && entry.race === race.race);
     let applied = 0;
@@ -58,6 +68,7 @@
       const choice = option && markCell.querySelectorAll(".tzSelect .dropDown li")[option.index];
       if (choice) {
         choice.click();
+        await new Promise((resolve) => setTimeout(resolve, 250));
       } else if (select && option) {
         select.value = option.value;
         select.dispatchEvent(new Event("change", { bubbles: true }));
@@ -78,7 +89,7 @@
   async function applyAllRaces(entries, race, raceId) {
     const results = []; const raceUrls = await discoverRaceUrls(raceId); const groups = new Map();
     for (const entry of entries) { const key = `${entry.place}_${entry.race}`; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(entry); }
-    for (const [key, targets] of groups) { const [groupPlace, raceNumber] = key.split('_'); const url = raceUrls.get(key) || (groupPlace === race.place ? `${location.origin}/race/shutuba.html?race_id=${raceId.slice(0, 10)}${String(raceNumber).padStart(2, '0')}` : ''); if (!url) { results.push(`${groupPlace}${raceNumber}R: race_id取得失敗`); continue; } let frameInfo; try { frameInfo = await loadRaceDocument(url); await new Promise((resolve) => setTimeout(resolve, 900)); const result = applyMarks(targets, { place: groupPlace, race: raceNumber }, frameInfo.doc); await new Promise((resolve) => setTimeout(resolve, 350)); results.push(`${groupPlace}${raceNumber}R: ${result.applied}/${result.expected}`); frameInfo.frame.remove(); } catch (_e) { results.push(`${groupPlace}${raceNumber}R: 読み込み失敗`); frameInfo?.frame.remove(); } }
+    for (const [key, targets] of groups) { const [groupPlace, raceNumber] = key.split('_'); const url = raceUrls.get(key) || (groupPlace === race.place ? `${location.origin}/race/shutuba.html?race_id=${raceId.slice(0, 10)}${String(raceNumber).padStart(2, '0')}` : ''); if (!url) { results.push(`${groupPlace}${raceNumber}R: race_id取得失敗`); continue; } let frameInfo; try { frameInfo = await loadRaceDocument(url); const result = await applyMarks(targets, { place: groupPlace, race: raceNumber }, frameInfo.doc); await new Promise((resolve) => setTimeout(resolve, 500)); results.push(`${groupPlace}${raceNumber}R: ${result.applied}/${result.expected}`); frameInfo.frame.remove(); } catch (_e) { results.push(`${groupPlace}${raceNumber}R: 読み込み失敗`); frameInfo?.frame.remove(); } }
     return results;
   }
 
@@ -93,7 +104,7 @@
     textarea.focus();
     overlay.querySelector(".ngwe-cancel").addEventListener("click", () => overlay.remove());
     overlay.querySelector("button:not(.ngwe-cancel)").addEventListener("click", async () => {
-      const entries = parseEntries(textarea.value); const result = applyMarks(entries, race); const raceId = new URL(location.href).searchParams.get("race_id"); const batchResults = await applyAllRaces(entries, race, raceId);
+      const entries = parseEntries(textarea.value); const result = await applyMarks(entries, race); const raceId = new URL(location.href).searchParams.get("race_id"); const batchResults = await applyAllRaces(entries, race, raceId);
       overlay.remove();
       const detail = result.missingHorses.length ? `\n出走行が見つからない馬: ${result.missingHorses.join("、")}` : result.missingMarkCells.length ? `\n印欄が見つからない馬: ${result.missingMarkCells.join("、")}` : "";
       alert(`${result.applied}頭を含む対象レースへ反映しました。\n${batchResults.join("\n")}${detail}`);
