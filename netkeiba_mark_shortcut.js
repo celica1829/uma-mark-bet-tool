@@ -111,12 +111,16 @@
     });
   }
 
-  const race = currentRace();
-  if (!race?.place) {
-    alert("netkeibaの出馬表または結果ページで実行してください。");
-    completion("対象外ページ");
-    return;
+  try {
+    const race = currentRace();
+    if (!race?.place) {
+      alert("netkeibaの出馬表または結果ページで実行してください。");
+    } else {
+      showInput(race);
+    }
+  } catch (error) {
+    alert(`印反映スクリプトでエラーが発生しました: ${error.message || error}`);
+  } finally {
+    completion("印反映スクリプトを終了しました");
   }
-  showInput(race);
-  completion("印入力を表示");
 })();
